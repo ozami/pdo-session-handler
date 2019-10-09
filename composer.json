@@ -1,0 +1,24 @@
+{
+    "name": "coroq/pdo-session-handler",
+    "description": "Session handler that saves data into RDBMS via PDO",
+    "type": "library",
+    "require": {
+        "php": ">=5.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^4.8",
+        "mockery/mockery": "^0.9.11"
+    },
+    "autoload": {
+        "psr-4": {
+            "Coroq\\": "src/"
+        }
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ozawa Masayuki",
+            "email": "ozawa@coroq.com"
+        }
+    ]
+}
