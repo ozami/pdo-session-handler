@@ -37,7 +37,6 @@ class PDOSessionHandler implements \SessionHandlerInterface {
    * @param string $save_path not used.
    * @param string $session_name not used.
    * @return true
-   * @throws SessionException
    */
   public function open($save_path, $session_name) {
     return true;
@@ -107,7 +106,7 @@ class PDOSessionHandler implements \SessionHandlerInterface {
       throw new SessionException("", 0, $exception);
     }
   }
-  
+
   /**
    * Close the session
    *
