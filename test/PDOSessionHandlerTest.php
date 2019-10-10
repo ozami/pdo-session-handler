@@ -1,5 +1,6 @@
 <?php
 use Coroq\PDOSessionHandler as Handler;
+use Coroq\PDOSessionHandler\SessionException;
 use Mockery as Mock;
 
 class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
@@ -36,6 +37,117 @@ class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
     $this->assertEquals(self::TEST_SESSION_DATA, $handler->read(self::TEST_SESSION_ID));
   }
 
+  public function testReadThrowsAnExceptionIfCouldNotPrepareStatement() {
+    $error_message = "pdo->prepare() failed.";
+    $pdo = Mock::mock("PDO");
+    $pdo
+      ->shouldReceive("prepare")
+      ->once()
+      ->andReturn(false)
+      ->shouldReceive("errorInfo")
+      ->once()
+      ->with()
+      ->andReturn(["HY000", "9999", $error_message]);
+    try {
+      $handler = new Handler($pdo, self::TEST_TABLE_NAME);
+      $handler->read(self::TEST_SESSION_ID);
+      $this->fail();
+    }
+    catch (SessionException $exception) {
+      $this->assertEquals($error_message, $exception->getMessage());
+    }
+  }
+
+  public function testReadThrowsAnExceptionIfCouldNotExecuteStatement() {
+    $error_message = "statement->execute() failed.";
+    $statement = Mock::mock("PDOStatement");
+    $statement
+      ->shouldReceive("execute")
+      ->once()
+      ->with([self::TEST_SESSION_ID])
+      ->andReturn(false)
+      ->shouldReceive("errorInfo")
+      ->once()
+      ->with()
+      ->andReturn(["HY000", "9999", $error_message]);
+    $pdo = Mock::mock("PDO");
+    $pdo
+      ->shouldReceive("prepare")
+      ->once()
+      ->andReturn($statement);
+    try {
+      $handler = new Handler($pdo, self::TEST_TABLE_NAME);
+      $handler->read(self::TEST_SESSION_ID);
+      $this->fail();
+    }
+    catch (SessionException $exception) {
+      $this->assertEquals($error_message, $exception->getMessage());
+    }
+  }
+
+  public function testReadThrowsAnExceptionIfPDOExceptionArised() {
+    $error_message = "pdo exception.";
+    $pdo = Mock::mock("PDO");
+    $pdo
+      ->shouldReceive("prepare")
+      ->once()
+      ->andThrow(new \PDOException($error_message));
+    try {
+      $handler = new Handler($pdo, self::TEST_TABLE_NAME);
+      $handler->read(self::TEST_SESSION_ID);
+      $this->fail();
+    }
+    catch (SessionException $exception) {
+      $this->assertEquals($error_message, $exception->getPrevious()->getMessage());
+    }
+  }
+
+  public function testReadReturnsEmptyStringIfNoSessionData() {
+    $statement = Mock::mock("PDOStatement");
+    $statement
+      ->shouldReceive("execute")
+      ->once()
+      ->andReturn(true)
+      ->shouldReceive("fetchColumn")
+      ->once()
+      ->andReturn(false);
+    $pdo = Mock::mock("PDO");
+    $pdo
+      ->shouldReceive("prepare")
+      ->once()
+      ->andReturn($statement);
+    $handler = new Handler($pdo, self::TEST_TABLE_NAME);
+    $this->assertEquals("", $handler->read(self::TEST_SESSION_ID));
+  }
+
+  public function testReadThrowsAnExceptionIfSessionDataWasCorrupted() {
+    $statement = Mock::mock("PDOStatement");
+    $statement
+      ->shouldReceive("execute")
+      ->once()
+      ->andReturn(true)
+      ->shouldReceive("fetchColumn")
+      ->once()
+      ->andReturn("#" . base64_encode(self::TEST_SESSION_DATA));
+    $pdo = Mock::mock("PDO");
+    $pdo
+      ->shouldReceive("prepare")
+      ->once()
+      ->andReturn($statement);
+    $handler = new Handler($pdo, self::TEST_TABLE_NAME);
+    try {
+      $handler = new Handler($pdo, self::TEST_TABLE_NAME);
+      $handler->read(self::TEST_SESSION_ID);
+      $this->fail();
+    }
+    catch (SessionException $exception) {
+      $this->assertEquals(
+        sprintf("Session data of %s has been corrupted.", self::TEST_SESSION_ID),
+        $exception->getMessage()
+      );
+    }
+  }
+
   public function testCanWriteSessionData() {
     $now = 123456789;
     $statement = Mock::mock("PDOStatement");
@@ -56,10 +168,74 @@ class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
     $this->assertTrue($handler->write(self::TEST_SESSION_ID, self::TEST_SESSION_DATA));
   }
 
+  public function testWriteThrowsAnExceptionIfCouldNotPrepareStatement() {
+    $error_message = "pdo->prepare() failed.";
+    $pdo = Mock::mock("PDO");
+    $pdo
+      ->shouldReceive("prepare")
+      ->once()
+      ->andReturn(false)
+      ->shouldReceive("errorInfo")
+      ->once()
+      ->with()
+      ->andReturn(["AAA", "BBB", $error_message]);
+    $handler = new Handler($pdo, self::TEST_TABLE_NAME);
+    try {
+      $handler->write(self::TEST_SESSION_ID, self::TEST_SESSION_DATA);
+      $this->fail();
+    }
+    catch (SessionException $exception) {
+      $this->assertEquals($error_message, $exception->getMessage());
+    }
+  }
+
+  public function testWriteThrowsAnExceptionIfCouldNotExecuteStatement() {
+    $error_message = "statement->execute() failed.";
+    $statement = Mock::mock("PDOStatement");
+    $statement
+      ->shouldReceive("execute")
+      ->once()
+      ->andReturn(false)
+      ->shouldReceive("errorInfo")
+      ->once()
+      ->with()
+      ->andReturn(["AAA", "BBB", $error_message]);
+    $pdo = Mock::mock("PDO");
+    $pdo
+      ->shouldReceive("prepare")
+      ->once()
+      ->andReturn($statement);
+    $handler = new Handler($pdo, self::TEST_TABLE_NAME);
+    try {
+      $handler->write(self::TEST_SESSION_ID, self::TEST_SESSION_DATA);
+      $this->fail();
+    }
+    catch (SessionException $exception) {
+      $this->assertEquals($error_message, $exception->getMessage());
+    }
+  }
+
+  public function testWriteThrowsAnExceptionIfPDOExceptionArised() {
+    $error_message = "pdo exception.";
+    $pdo = Mock::mock("PDO");
+    $pdo
+      ->shouldReceive("prepare")
+      ->once()
+      ->andThrow(new \PDOException($error_message));
+    $handler = new Handler($pdo, self::TEST_TABLE_NAME);
+    try {
+      $handler->write(self::TEST_SESSION_ID, self::TEST_SESSION_DATA);
+      $this->fail();
+    }
+    catch (SessionException $exception) {
+      $this->assertEquals($error_message, $exception->getPrevious()->getMessage());
+    }
+  }
+
   public function testClose() {
     $this->assertTrue((new Handler(null, self::TEST_TABLE_NAME))->close());
   }
-  
+
   public function testDestroy() {
     $statement = Mock::mock("PDOStatement");
     $statement
@@ -76,7 +252,7 @@ class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
     $handler = new Handler($pdo, self::TEST_TABLE_NAME);
     $this->assertTrue($handler->destroy(self::TEST_SESSION_ID));
   }
-  
+
   public function testGC() {
     $now = 123456789;
     $maxlifetime = 60 * 60 * 4;

@@ -68,7 +68,7 @@ class PDOSessionHandler implements \SessionHandlerInterface {
       }
       $session_data = base64_decode($encoded_session_data, true);
       if ($session_data === false) {
-        throw new SessionException();
+        throw new SessionException("Session data of $session_id has been corrupted.");
       }
       return $session_data;
     }
