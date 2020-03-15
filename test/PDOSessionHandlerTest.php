@@ -31,7 +31,7 @@ class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
     $pdo
       ->shouldReceive("prepare")
       ->once()
-      ->with(sprintf('select "session_data" from "%s" where "session_id" = ? order by "id" desc limit 1', self::TEST_TABLE_NAME))
+      ->with(sprintf('select session_data from %s where session_id = ? order by id desc limit 1', self::TEST_TABLE_NAME))
       ->andReturn($statement);
     $handler = new Handler($pdo, self::TEST_TABLE_NAME);
     $this->assertEquals(self::TEST_SESSION_DATA, $handler->read(self::TEST_SESSION_ID));
@@ -160,7 +160,7 @@ class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
     $pdo
       ->shouldReceive("prepare")
       ->once()
-      ->with(sprintf('insert into "%s" ("time_created", "session_id", "session_data") values (?, ?, ?)', self::TEST_TABLE_NAME))
+      ->with(sprintf('insert into %s (time_created, session_id, session_data) values (?, ?, ?)', self::TEST_TABLE_NAME))
       ->andReturn($statement);
     $handler = new Handler($pdo, self::TEST_TABLE_NAME, function() use ($now) {
       return $now;
@@ -247,7 +247,7 @@ class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
     $pdo
       ->shouldReceive("prepare")
       ->once()
-      ->with(sprintf('delete from "%s" where "session_id" = ?', self::TEST_TABLE_NAME))
+      ->with(sprintf('delete from %s where session_id = ?', self::TEST_TABLE_NAME))
       ->andReturn($statement);
     $handler = new Handler($pdo, self::TEST_TABLE_NAME);
     $this->assertTrue($handler->destroy(self::TEST_SESSION_ID));
@@ -266,7 +266,7 @@ class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
     $pdo
       ->shouldReceive("prepare")
       ->once()
-      ->with(sprintf('delete from "%s" where "time_created" <= ?', self::TEST_TABLE_NAME))
+      ->with(sprintf('delete from %s where time_created <= ?', self::TEST_TABLE_NAME))
       ->andReturn($statement);
     $handler = new Handler($pdo, self::TEST_TABLE_NAME, function() use ($now) {
       return $now;

@@ -25,6 +25,9 @@ class PDOSessionHandler implements \SessionHandlerInterface {
    * @param callable $getCurrentTime
    */
   public function __construct($pdo, $table_name, $getCurrentTime = "time") {
+    if (preg_match("#[^a-zA-Z0-9_]#", $table_name)) {
+      throw new \DomainException("Invalid \$table_name.");
+    }
     $this->pdo = $pdo;
     $this->table_name = $table_name;
     $this->getCurrentTime = $getCurrentTime;
@@ -53,7 +56,7 @@ class PDOSessionHandler implements \SessionHandlerInterface {
     try {
       // TODO: support RDBMS without "limit" clause such as Oracle
       $statement = $this->pdo->prepare(sprintf(
-        'select "session_data" from "%s" where "session_id" = ? order by "id" desc limit 1',
+        'select session_data from %s where session_id = ? order by id desc limit 1',
         $this->table_name
       ));
       if (!$statement) {
@@ -89,7 +92,7 @@ class PDOSessionHandler implements \SessionHandlerInterface {
     try {
       // TODO: consider whether rollback is needed within a transaction
       $statement = $this->pdo->prepare(sprintf(
-        'insert into "%s" ("time_created", "session_id", "session_data") values (?, ?, ?)',
+        'insert into %s (time_created, session_id, session_data) values (?, ?, ?)',
         $this->table_name
       ));
       if (!$statement) {
@@ -127,7 +130,7 @@ class PDOSessionHandler implements \SessionHandlerInterface {
   public function destroy($session_id) {
     try {
       $statement = $this->pdo->prepare(sprintf(
-        'delete from "%s" where "session_id" = ?',
+        'delete from %s where session_id = ?',
         $this->table_name
       ));
       if (!$statement) {
@@ -153,7 +156,7 @@ class PDOSessionHandler implements \SessionHandlerInterface {
   public function gc($maxlifetime) {
     try {
       $statement = $this->pdo->prepare(sprintf(
-        'delete from "%s" where "time_created" <= ?',
+        'delete from %s where time_created <= ?',
         $this->table_name
       ));
       if (!$statement) {
