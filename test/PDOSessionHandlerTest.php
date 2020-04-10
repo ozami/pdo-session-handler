@@ -164,7 +164,40 @@ class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
       ->andReturn($statement);
     $handler = new Handler($pdo, self::TEST_TABLE_NAME, function() use ($now) {
       return $now;
-    });
+    }, 0);
+    $this->assertTrue($handler->write(self::TEST_SESSION_ID, self::TEST_SESSION_DATA));
+  }
+
+  public function testCanCleanupOnWritingSessionData() {
+    $now = 123456789;
+    $statement = Mock::mock("PDOStatement");
+    $statement
+      ->shouldReceive("execute")
+      ->with([$now, self::TEST_SESSION_ID, base64_encode(self::TEST_SESSION_DATA)])
+      ->once()
+      ->andReturn(true);
+    $delete_statement = Mock::mock("PDOStatement");
+    $delete_statement
+      ->shouldReceive("execute")
+      ->with([$now, self::TEST_SESSION_ID])
+      ->once()
+      ->andReturn(true);
+    $pdo = Mock::mock("PDO");
+    $pdo
+      ->shouldReceive("prepare")
+      ->with(sprintf('insert into %s (time_created, session_id, session_data) values (?, ?, ?)', self::TEST_TABLE_NAME))
+      ->andReturn($statement)
+      ->once()
+      ->ordered();
+    $pdo
+      ->shouldReceive("prepare")
+      ->with(sprintf('delete from %s where time_created < ? and session_id = ?', self::TEST_TABLE_NAME))
+      ->andReturn($delete_statement)
+      ->once()
+      ->ordered();
+    $handler = new Handler($pdo, self::TEST_TABLE_NAME, function() use ($now) {
+      return $now;
+    }, 1);
     $this->assertTrue($handler->write(self::TEST_SESSION_ID, self::TEST_SESSION_DATA));
   }
 

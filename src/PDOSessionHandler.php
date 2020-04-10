@@ -16,6 +16,8 @@ class PDOSessionHandler implements \SessionHandlerInterface {
   private $table_name;
   /** @var callable */
   private $getCurrentTime;
+  /** @var $cleanup_rate */
+  private $per_session_cleanup_rate;
 
   /**
    * Constructor
@@ -23,14 +25,16 @@ class PDOSessionHandler implements \SessionHandlerInterface {
    * @param \PDO $pdo
    * @param string $table_name
    * @param callable $getCurrentTime
+   * @param float $per_session_cleanup_rate
    */
-  public function __construct($pdo, $table_name, $getCurrentTime = "time") {
+  public function __construct($pdo, $table_name, $getCurrentTime = "time", $per_session_cleanup_rate = 0.2) {
     if (preg_match("#[^a-zA-Z0-9_]#", $table_name)) {
       throw new \DomainException("Invalid \$table_name.");
     }
     $this->pdo = $pdo;
     $this->table_name = $table_name;
     $this->getCurrentTime = $getCurrentTime;
+    $this->per_session_cleanup_rate = $per_session_cleanup_rate;
   }
 
   /**
@@ -103,10 +107,36 @@ class PDOSessionHandler implements \SessionHandlerInterface {
       if (!$statement->execute([$now, $session_id, $encoded_session_data])) {
         throw new SessionException($statement->errorInfo()[2]);
       }
+      $this->deletePreviousData($now, $session_id);
       return true;
     }
     catch (\PDOException $exception) {
       throw new SessionException("", 0, $exception);
+    }
+  }
+
+  /**
+   * Delete previous data of the specified session
+   * @param int $time_created
+   * @param string $session_id
+   */
+  private function deletePreviousData($time_created, $session_id) {
+    if ($this->per_session_cleanup_rate < mt_rand(1, 100) / 100) {
+      return;
+    }
+    // ignore errors because cleaning up is not a fatal operation.
+    try {
+      $statement = $this->pdo->prepare(sprintf(
+        'delete from %s where time_created < ? and session_id = ?',
+        $this->table_name
+      ));
+      if (!$statement) {
+        return;
+      }
+      $statement->execute([$time_created, $session_id]);
+    }
+    catch (\PDOException $exception) {
+      // do nothing
     }
   }
 
