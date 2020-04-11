@@ -162,9 +162,12 @@ class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
       ->once()
       ->with(sprintf('insert into %s (time_created, session_id, session_data) values (?, ?, ?)', self::TEST_TABLE_NAME))
       ->andReturn($statement);
-    $handler = new Handler($pdo, self::TEST_TABLE_NAME, function() use ($now) {
-      return $now;
-    }, 0);
+    $handler = new Handler($pdo, self::TEST_TABLE_NAME, [
+      "getCurrentTime" => function() use ($now) {
+        return $now;
+      },
+      "per_session_cleanup_rate" => 0,
+    ]);
     $this->assertTrue($handler->write(self::TEST_SESSION_ID, self::TEST_SESSION_DATA));
   }
 
@@ -195,9 +198,12 @@ class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
       ->andReturn($delete_statement)
       ->once()
       ->ordered();
-    $handler = new Handler($pdo, self::TEST_TABLE_NAME, function() use ($now) {
-      return $now;
-    }, 1);
+    $handler = new Handler($pdo, self::TEST_TABLE_NAME, [
+      "getCurrentTime" => function() use ($now) {
+        return $now;
+      },
+      "per_session_cleanup_rate" => 1,
+    ]);
     $this->assertTrue($handler->write(self::TEST_SESSION_ID, self::TEST_SESSION_DATA));
   }
 
@@ -301,9 +307,11 @@ class PDOSessionHandlerTest extends \PHPUnit_Framework_TestCase {
       ->once()
       ->with(sprintf('delete from %s where time_created <= ?', self::TEST_TABLE_NAME))
       ->andReturn($statement);
-    $handler = new Handler($pdo, self::TEST_TABLE_NAME, function() use ($now) {
-      return $now;
-    });
+    $handler = new Handler($pdo, self::TEST_TABLE_NAME, [
+      "getCurrentTime" => function() use ($now) {
+        return $now;
+      },
+    ]);
     $this->assertTrue($handler->gc($maxlifetime));
   }
 }

@@ -16,7 +16,7 @@ class PDOSessionHandler implements \SessionHandlerInterface {
   private $table_name;
   /** @var callable */
   private $getCurrentTime;
-  /** @var $cleanup_rate */
+  /** @var float */
   private $per_session_cleanup_rate;
 
   /**
@@ -24,17 +24,22 @@ class PDOSessionHandler implements \SessionHandlerInterface {
    *
    * @param \PDO $pdo
    * @param string $table_name
+   * @param array $options getCurrentTime => callable, per_session_cleanup_rate => float
    * @param callable $getCurrentTime
    * @param float $per_session_cleanup_rate
    */
-  public function __construct($pdo, $table_name, $getCurrentTime = "time", $per_session_cleanup_rate = 0.2) {
+  public function __construct($pdo, $table_name, array $options = []) {
     if (preg_match("#[^a-zA-Z0-9_]#", $table_name)) {
       throw new \DomainException("Invalid \$table_name.");
     }
+    $options += [
+      "getCurrentTime" => "time",
+      "per_session_cleanup_rate" => 0.2,
+    ];
     $this->pdo = $pdo;
     $this->table_name = $table_name;
-    $this->getCurrentTime = $getCurrentTime;
-    $this->per_session_cleanup_rate = $per_session_cleanup_rate;
+    $this->getCurrentTime = $options["getCurrentTime"];
+    $this->per_session_cleanup_rate = $options["per_session_cleanup_rate"];
   }
 
   /**
